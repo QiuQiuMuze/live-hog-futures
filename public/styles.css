@@ -601,11 +601,13 @@ body.market-page.theme-soy {
   margin-bottom: 12px;
 }
 
+
 .ai-timestamp {
   margin-top: 8px;
   font-size: 0.85rem;
   color: rgba(15, 23, 42, 0.6);
 }
+
 
 .market-ai button {
   margin-top: 12px;

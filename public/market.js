@@ -10,7 +10,9 @@ const API = {
 
 const SESSION_KEY = 'futures-session';
 
+
 const AI_REFRESH_INTERVAL = 60000;
+
 
 const body = document.body;
 const {
@@ -36,8 +38,10 @@ let timestamps = [];
 let currentPrice = basePrice;
 let previousPrice = basePrice;
 let priceTimer = null;
+
 let aiTimer = null;
 let aiRefreshing = false;
+
 let currentHolding = { position: 0, averagePrice: 0 };
 
 const authShell = document.getElementById('auth-shell');
@@ -59,7 +63,9 @@ const buyBtn = document.getElementById('buy-btn');
 const sellBtn = document.getElementById('sell-btn');
 const aiContent = document.getElementById('ai-content');
 const refreshAiBtn = document.getElementById('refresh-ai');
+
 const aiUpdatedAt = document.getElementById('ai-updated-at');
+
 const currentPriceEl = document.getElementById('current-price');
 const priceChangeEl = document.getElementById('price-change');
 const marketTitle = document.getElementById('market-title');
@@ -179,7 +185,9 @@ async function request(url, options = {}) {
 function handleUnauthorized(message) {
   clearSession();
   stopPriceStream();
+
   stopAiAutoRefresh();
+
   marketApp.classList.add('hidden');
   authShell.classList.remove('hidden');
   setMessage(loginMessage, message, true);
@@ -231,7 +239,9 @@ logoutBtn.addEventListener('click', async () => {
   } finally {
     clearSession();
     stopPriceStream();
+
     stopAiAutoRefresh();
+
     if (chart) {
       chart.destroy();
       chart = null;
@@ -282,11 +292,13 @@ async function enterMarket() {
   userDisplay.textContent = username;
   initializeChart();
   startPriceStream();
+
   if (aiUpdatedAt) {
     aiUpdatedAt.textContent = '上次更新：加载中...';
   }
   await Promise.all([refreshSummary(), refreshHistory(), fetchAiInsights()]);
   startAiAutoRefresh();
+
 }
 
 async function refreshSummary() {
@@ -334,6 +346,7 @@ async function refreshHistory() {
 }
 
 async function fetchAiInsights() {
+
   if (aiRefreshing) return;
   aiRefreshing = true;
   try {
@@ -427,6 +440,7 @@ function stopPriceStream() {
   }
 }
 
+
 function startAiAutoRefresh() {
   stopAiAutoRefresh();
   aiTimer = setInterval(async () => {
@@ -450,6 +464,7 @@ function stopAiAutoRefresh() {
     aiUpdatedAt.textContent = '上次更新：-';
   }
 }
+
 
 function updatePrice() {
   previousPrice = currentPrice;
