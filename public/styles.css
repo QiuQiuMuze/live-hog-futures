@@ -300,6 +300,13 @@ input:focus {
   margin-bottom: 8px;
 }
 
+.ai-note {
+  margin: 8px 0 12px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .ai-suggestion {
   margin-top: 12px;
   color: #facc15;
@@ -601,13 +608,11 @@ body.market-page.theme-soy {
   margin-bottom: 12px;
 }
 
-
 .ai-timestamp {
   margin-top: 8px;
   font-size: 0.85rem;
   color: rgba(15, 23, 42, 0.6);
 }
-
 
 .market-ai button {
   margin-top: 12px;

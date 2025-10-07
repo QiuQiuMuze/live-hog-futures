@@ -17,8 +17,12 @@ const MARKETS = {
   SOY: { name: '豆粕期货', unit: '元/吨', currency: 'CNY' }
 };
 
+// 自动刷新 AI 洞察的频率（默认每 3 小时）
+const AI_REFRESH_INTERVAL = 3 * 60 * 60 * 1000;
+
 let token = null;
 let username = null;
+let aiTimer = null;
 
 const authShell = document.getElementById('auth-shell');
 const dashboard = document.getElementById('dashboard');
@@ -137,6 +141,7 @@ function handleUnauthorized(message) {
   registerForm.reset();
   setMessage(loginMessage, message, true);
   showAlert(message);
+  stopAiAutoRefresh();
 }
 
 registerForm.addEventListener('submit', async (event) => {
@@ -189,15 +194,18 @@ logoutBtn.addEventListener('click', async () => {
     registerForm.reset();
     setMessage(loginMessage, '');
     setMessage(registerMessage, '');
+    stopAiAutoRefresh();
   }
 });
 
 async function enterDashboard() {
+  stopAiAutoRefresh();
   authShell.classList.add('hidden');
   dashboard.classList.remove('hidden');
   userDisplay.textContent = username;
   hideAlert();
   await Promise.all([refreshSummary(), refreshHistory(), fetchAiInsights()]);
+  startAiAutoRefresh();
 }
 
 async function refreshSummary() {
@@ -292,13 +300,34 @@ async function fetchAiInsights() {
   aiContent.append(headline, narrative, suggestion);
 }
 
-refreshAiBtn.addEventListener('click', async () => {
-  try {
-    await fetchAiInsights();
-  } catch (error) {
-    aiContent.innerHTML = `<p class="placeholder">${error.message}</p>`;
+if (refreshAiBtn) {
+  refreshAiBtn.addEventListener('click', async () => {
+    try {
+      await fetchAiInsights();
+      startAiAutoRefresh();
+    } catch (error) {
+      aiContent.innerHTML = `<p class="placeholder">${error.message}</p>`;
+    }
+  });
+}
+
+function startAiAutoRefresh() {
+  stopAiAutoRefresh();
+  aiTimer = setInterval(async () => {
+    try {
+      await fetchAiInsights();
+    } catch (error) {
+      console.warn('自动刷新 AI 洞察失败', error);
+    }
+  }, AI_REFRESH_INTERVAL);
+}
+
+function stopAiAutoRefresh() {
+  if (aiTimer) {
+    clearInterval(aiTimer);
+    aiTimer = null;
   }
-});
+}
 
 window.addEventListener('DOMContentLoaded', async () => {
   if (restoreSession()) {
