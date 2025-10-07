@@ -10,9 +10,6 @@ const API = {
 
 const SESSION_KEY = 'futures-session';
 
-// 自动刷新 AI 洞察的频率（默认每 3 小时）
-const AI_REFRESH_INTERVAL = 3 * 60 * 60 * 1000;
-
 const body = document.body;
 const {
   symbol: symbolRaw,
@@ -59,8 +56,7 @@ const quantityInput = document.getElementById('trade-quantity');
 const buyBtn = document.getElementById('buy-btn');
 const sellBtn = document.getElementById('sell-btn');
 const aiContent = document.getElementById('ai-content');
-const refreshAiBtn = document.getElementById('refresh-ai');
-const aiUpdatedAt = document.getElementById('ai-updated-at');
+const aiNextEl = document.getElementById('ai-next');
 const currentPriceEl = document.getElementById('current-price');
 const priceChangeEl = document.getElementById('price-change');
 const marketTitle = document.getElementById('market-title');
@@ -181,6 +177,7 @@ function handleUnauthorized(message) {
   clearSession();
   stopPriceStream();
   stopAiAutoRefresh();
+  setAiNextText('下次预计生成：-');
   marketApp.classList.add('hidden');
   authShell.classList.remove('hidden');
   setMessage(loginMessage, message, true);
@@ -233,6 +230,7 @@ logoutBtn.addEventListener('click', async () => {
     clearSession();
     stopPriceStream();
     stopAiAutoRefresh();
+    setAiNextText('下次预计生成：-');
     if (chart) {
       chart.destroy();
       chart = null;
@@ -283,11 +281,14 @@ async function enterMarket() {
   userDisplay.textContent = username;
   initializeChart();
   startPriceStream();
-  if (aiUpdatedAt) {
-    aiUpdatedAt.textContent = '上次更新：加载中...';
+  stopAiAutoRefresh();
+  setAiNextText('下次预计生成：计算中…');
+  await Promise.all([refreshSummary(), refreshHistory()]);
+  try {
+    await fetchAiInsights();
+  } catch (err) {
+    console.warn('AI 洞察加载失败', err);
   }
-  await Promise.all([refreshSummary(), refreshHistory(), fetchAiInsights()]);
-  startAiAutoRefresh();
 }
 
 async function refreshSummary() {
@@ -334,41 +335,103 @@ async function refreshHistory() {
   });
 }
 
+function formatAiTime(isoString) {
+  if (!isoString) return '-';
+  const date = new Date(isoString);
+  if (Number.isNaN(date.getTime())) return '-';
+  return date.toLocaleString('zh-CN', { hour12: false });
+}
+
+function setAiNextText(text) {
+  if (aiNextEl) {
+    aiNextEl.textContent = text;
+  }
+}
+
+function renderAiInsights(insights = []) {
+  aiContent.innerHTML = '';
+  if (!insights.length) {
+    aiContent.innerHTML = '<p class="placeholder">暂未生成新的 AI 观点。</p>';
+    return;
+  }
+  insights.forEach((entry) => {
+    const item = document.createElement('article');
+    item.className = `ai-item ai-${entry.direction || 'neutral'}`;
+
+    const header = document.createElement('div');
+    header.className = 'ai-item-header';
+
+    const badge = document.createElement('span');
+    badge.className = `ai-direction ${entry.direction === 'down' ? 'ai-down' : 'ai-up'}`;
+    badge.textContent = entry.direction === 'down' ? '看跌' : '看涨';
+
+    const title = document.createElement('h3');
+    title.textContent = entry.headline;
+
+    header.append(badge, title);
+
+    const time = document.createElement('p');
+    time.className = 'ai-time';
+    time.textContent = `发布时间：${formatAiTime(entry.issuedAt)}`;
+
+    const impact = document.createElement('p');
+    impact.className = 'ai-impact';
+    impact.textContent = `走势影响：${entry.impact || '—'}`;
+
+    const narrative = document.createElement('p');
+    narrative.textContent = entry.narrative;
+
+    const suggestion = document.createElement('p');
+    suggestion.className = 'ai-suggestion';
+    suggestion.textContent = entry.suggestion;
+
+    item.append(header, time, impact, narrative, suggestion);
+    aiContent.appendChild(item);
+  });
+}
+
+function updateAiNext(nextRefreshAt) {
+  if (!nextRefreshAt) {
+    setAiNextText('下次预计生成：系统准备中');
+    return;
+  }
+  setAiNextText(`下次预计生成：${formatAiTime(nextRefreshAt)}`);
+}
+
+function scheduleAiAutoRefresh(nextRefreshAt) {
+  if (aiTimer) {
+    clearTimeout(aiTimer);
+    aiTimer = null;
+  }
+  if (!nextRefreshAt) return;
+  const targetTime = Date.parse(nextRefreshAt);
+  if (Number.isNaN(targetTime)) return;
+  const delay = Math.max(targetTime - Date.now(), 60 * 1000);
+  aiTimer = setTimeout(async () => {
+    try {
+      await fetchAiInsights();
+    } catch (error) {
+      console.warn('自动刷新 AI 洞察失败', error);
+    }
+  }, delay);
+}
+
 async function fetchAiInsights() {
   if (aiRefreshing) return;
   aiRefreshing = true;
   try {
     const data = await request(`${API.ai}?symbol=${encodeURIComponent(symbol)}`, { method: 'GET' });
-    aiContent.innerHTML = '';
-    const headline = document.createElement('h3');
-    headline.textContent = data.headline;
-    const narrative = document.createElement('p');
-    narrative.textContent = data.narrative;
-    const suggestion = document.createElement('p');
-    suggestion.className = 'ai-suggestion';
-    suggestion.textContent = data.suggestion;
-    aiContent.append(headline, narrative, suggestion);
-    if (aiUpdatedAt) {
-      const timestamp = new Date().toLocaleString('zh-CN', { hour12: false });
-      aiUpdatedAt.textContent = `上次更新：${timestamp}`;
-    }
+    renderAiInsights(data.insights || []);
+    updateAiNext(data.nextRefreshAt);
+    scheduleAiAutoRefresh(data.nextRefreshAt);
+    return data;
+  } catch (err) {
+    aiContent.innerHTML = `<p class="placeholder">${err.message}</p>`;
+    setAiNextText('下次预计生成：获取失败');
+    throw err;
   } finally {
     aiRefreshing = false;
   }
-}
-
-if (refreshAiBtn) {
-  refreshAiBtn.addEventListener('click', async () => {
-    try {
-      await fetchAiInsights();
-      startAiAutoRefresh();
-    } catch (err) {
-      aiContent.innerHTML = `<p class="placeholder">${err.message}</p>`;
-      if (aiUpdatedAt) {
-        aiUpdatedAt.textContent = '上次更新：刷新失败';
-      }
-    }
-  });
 }
 
 function initializeChart() {
@@ -428,27 +491,10 @@ function stopPriceStream() {
   }
 }
 
-function startAiAutoRefresh() {
-  stopAiAutoRefresh();
-  aiTimer = setInterval(async () => {
-    try {
-      await fetchAiInsights();
-    } catch (err) {
-      console.warn('自动刷新 AI 洞察失败', err);
-      if (aiUpdatedAt) {
-        aiUpdatedAt.textContent = '上次更新：自动刷新失败';
-      }
-    }
-  }, AI_REFRESH_INTERVAL);
-}
-
 function stopAiAutoRefresh() {
   if (aiTimer) {
-    clearInterval(aiTimer);
+    clearTimeout(aiTimer);
     aiTimer = null;
-  }
-  if (aiUpdatedAt) {
-    aiUpdatedAt.textContent = '上次更新：-';
   }
 }
 

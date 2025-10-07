@@ -300,11 +300,87 @@ input:focus {
   margin-bottom: 8px;
 }
 
+.auto-pill {
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.08);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .ai-note {
   margin: 8px 0 12px;
   color: var(--text-secondary);
   font-size: 13px;
   line-height: 1.5;
+}
+
+.ai-next,
+.ai-timestamp {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.ai-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ai-item {
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.04);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(12px);
+}
+
+.ai-item-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.ai-item-header h3 {
+  font-size: 16px;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.ai-direction {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+}
+
+.ai-direction.ai-up {
+  background: rgba(22, 163, 74, 0.1);
+  color: #15803d;
+}
+
+.ai-direction.ai-down {
+  background: rgba(220, 38, 38, 0.1);
+  color: #b91c1c;
+}
+
+.ai-time {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.ai-impact {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(15, 23, 42, 0.75);
+  margin-bottom: 6px;
 }
 
 .ai-suggestion {
@@ -606,16 +682,6 @@ body.market-page.theme-soy {
 
 .market-ai h2 {
   margin-bottom: 12px;
-}
-
-.ai-timestamp {
-  margin-top: 8px;
-  font-size: 0.85rem;
-  color: rgba(15, 23, 42, 0.6);
-}
-
-.market-ai button {
-  margin-top: 12px;
 }
 
 .kickout-banner {

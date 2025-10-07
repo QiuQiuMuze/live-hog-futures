@@ -17,6 +17,8 @@ if (!fs.existsSync(USERS_FILE)) {
 }
 
 const INITIAL_BALANCE = 1000000;
+const AI_MIN_INTERVAL = 12 * 60 * 60 * 1000;
+const AI_MAX_INTERVAL = 24 * 60 * 60 * 1000;
 const sessions = new Map();
 const userSessions = new Map();
 
@@ -43,6 +45,10 @@ function normalizeUsers(users) {
     }
     if (!Array.isArray(user.history)) {
       user.history = [];
+      updated = true;
+    }
+    if (!user.aiInsights) {
+      user.aiInsights = {};
       updated = true;
     }
     let historyUpdated = false;
@@ -176,7 +182,8 @@ function handleRegister(req, res) {
         password,
         balance: INITIAL_BALANCE,
         holdings: {},
-        history: []
+        history: [],
+        aiInsights: {}
       };
       writeUsers(users);
       sendJson(res, 200, { message: '注册成功，请登录。' });
@@ -354,45 +361,232 @@ const aiThemes = {
   HOG: {
     headline: '生猪期货AI快报',
     drivers: ['饲料成本变动', '供给调控政策', '疫病防控动态', '消费淡旺季切换', '冻品库存变化'],
-    tones: ['看涨', '震荡偏强', '震荡整理', '快速回调', '筑底反弹']
+    outcomes: [
+      {
+        direction: 'up',
+        impact: '可能推动生猪期价震荡走高',
+        advice: '可考虑逢低吸纳多单，并严格设置风险位。'
+      },
+      {
+        direction: 'up',
+        impact: '有望带动盘面延续升势',
+        advice: '顺势加仓需注意节奏，建议分批布局。'
+      },
+      {
+        direction: 'down',
+        impact: '或令生猪期价承压回落',
+        advice: '多单宜减仓观望，可适当考虑防御性空单。'
+      },
+      {
+        direction: 'down',
+        impact: '大概率触发短线回调',
+        advice: '建议锁定利润，控制杠杆等待企稳信号。'
+      }
+    ]
   },
   GOLD: {
     headline: '黄金期货AI播报',
     drivers: ['美联储利率预期', '美元指数波动', '避险需求', '实物金流入', '全球通胀走势'],
-    tones: ['稳步走高', '高位震荡', '回调蓄势', '突破上行', '承压回落']
+    outcomes: [
+      {
+        direction: 'up',
+        impact: '料将支撑金价震荡上行',
+        advice: '可逢回调逐步建立多单，并关注美元走势。'
+      },
+      {
+        direction: 'up',
+        impact: '或触发突破性上涨',
+        advice: '顺势做多同时控制仓位，警惕突发消息。'
+      },
+      {
+        direction: 'down',
+        impact: '恐加剧金价回落压力',
+        advice: '建议减轻多头敞口，关注支撑位表现。'
+      },
+      {
+        direction: 'down',
+        impact: '可能引发避险情绪降温后的下行',
+        advice: '可考虑短线试空，并设置紧密止损。'
+      }
+    ]
   },
   MOUTAI: {
     headline: '白酒主力AI简报',
     drivers: ['渠道动销反馈', '批价走势', '节假日备货', '消费信心指数', '原料成本'],
-    tones: ['震荡盘整', '缓步上扬', '冲高回落', '底部企稳', '震荡偏弱']
+    outcomes: [
+      {
+        direction: 'up',
+        impact: '有望推升白酒主力期价稳步走强',
+        advice: '多单可持有并择机加仓，但需关注成交量。'
+      },
+      {
+        direction: 'up',
+        impact: '或令盘面重拾升势',
+        advice: '建议逢低布局多单，同时设置浮盈保护。'
+      },
+      {
+        direction: 'down',
+        impact: '可能压制价格重心下移',
+        advice: '多单需及时止盈，空单可轻仓尝试。'
+      },
+      {
+        direction: 'down',
+        impact: '大概率引发短线调整',
+        advice: '建议观望或采取空头对冲策略。'
+      }
+    ]
   },
   CRUDE: {
     headline: '原油期货AI速递',
     drivers: ['OPEC+产量指引', '全球需求预期', '地缘政治风险', '美元走势', '库存数据'],
-    tones: ['震荡上行', '区间整理', '冲高回落', '快速反弹', '缓慢回升']
+    outcomes: [
+      {
+        direction: 'up',
+        impact: '或推升油价震荡走高',
+        advice: '建议分批做多并关注库存数据变化。'
+      },
+      {
+        direction: 'up',
+        impact: '有望带来拉升行情',
+        advice: '顺势持有多单，但应做好风险对冲。'
+      },
+      {
+        direction: 'down',
+        impact: '可能引发油价回落',
+        advice: '多单需收紧止损，短线空单可尝试介入。'
+      },
+      {
+        direction: 'down',
+        impact: '大概率压制反弹力度',
+        advice: '以反弹做空为主，谨慎追高。'
+      }
+    ]
   },
   SOY: {
     headline: '豆粕期货AI观察',
     drivers: ['南美产量预估', '国内压榨开机率', '饲料需求', '进口成本', '远期基差'],
-    tones: ['偏强震荡', '承压下探', '整理筑底', '宽幅震荡', '震荡上行']
+    outcomes: [
+      {
+        direction: 'up',
+        impact: '预计支撑豆粕价格震荡抬升',
+        advice: '多单可逐步建立，但需留意原料供应。'
+      },
+      {
+        direction: 'up',
+        impact: '或推动盘面偏强运行',
+        advice: '建议沿趋势做多，同时关注美元粮价联动。'
+      },
+      {
+        direction: 'down',
+        impact: '可能拖累价格下行',
+        advice: '多单应减持，空单可轻仓跟进。'
+      },
+      {
+        direction: 'down',
+        impact: '大概率导致盘面承压震荡',
+        advice: '以逢高沽空为主，控制仓位防反抽。'
+      }
+    ]
   }
 };
 
+function randomAiInterval(baseMillis) {
+  const span = AI_MIN_INTERVAL + Math.random() * (AI_MAX_INTERVAL - AI_MIN_INTERVAL);
+  return baseMillis + span;
+}
+
+function createAiInsight(symbol, pool, issuedAtMillis) {
+  const driver = pool.drivers[Math.floor(Math.random() * pool.drivers.length)];
+  const outcome = pool.outcomes[Math.floor(Math.random() * pool.outcomes.length)];
+  const confidence = Math.floor(Math.random() * 41) + 55;
+  const issuedAt = new Date(issuedAtMillis).toISOString();
+  const issuedLabel = new Date(issuedAt).toLocaleString('zh-CN', { hour12: false });
+  const directionLabel = outcome.direction === 'up' ? '看涨' : '看跌';
+  const narrative = `${issuedLabel}，模型监测到${driver}，判断${outcome.impact}，置信度约为${confidence}%。`;
+  return {
+    id: crypto.randomUUID(),
+    symbol,
+    issuedAt,
+    headline: `${pool.headline}｜${directionLabel}`,
+    narrative,
+    suggestion: outcome.advice,
+    direction: outcome.direction,
+    driver,
+    impact: outcome.impact,
+    confidence
+  };
+}
+
+function ensureAiState(user, symbol, pool) {
+  if (!user.aiInsights) {
+    user.aiInsights = {};
+  }
+  if (!user.aiInsights[symbol]) {
+    const initialInsight = createAiInsight(symbol, pool, Date.now());
+    user.aiInsights[symbol] = {
+      entries: [initialInsight],
+      nextRefreshAt: new Date(randomAiInterval(Date.now())).toISOString()
+    };
+  }
+  const state = user.aiInsights[symbol];
+  if (!Array.isArray(state.entries)) {
+    state.entries = [];
+  }
+  if (!state.entries.length) {
+    const initialInsight = createAiInsight(symbol, pool, Date.now());
+    state.entries = [initialInsight];
+    state.nextRefreshAt = new Date(randomAiInterval(Date.now())).toISOString();
+  }
+  if (!state.nextRefreshAt) {
+    const lastIssued = Date.parse(state.entries[0]?.issuedAt || Date.now());
+    const base = Number.isNaN(lastIssued) ? Date.now() : lastIssued;
+    state.nextRefreshAt = new Date(randomAiInterval(base)).toISOString();
+  }
+  return state;
+}
+
+function rollAiState(state, pool, symbol) {
+  const now = Date.now();
+  let nextMillis = Date.parse(state.nextRefreshAt || '');
+  if (Number.isNaN(nextMillis)) {
+    const lastIssued = Date.parse(state.entries[0]?.issuedAt || Date.now());
+    const base = Number.isNaN(lastIssued) ? Date.now() : lastIssued;
+    nextMillis = randomAiInterval(base);
+  }
+  let iterations = 0;
+  while (nextMillis <= now && iterations < 10) {
+    const insight = createAiInsight(symbol, pool, nextMillis);
+    state.entries.unshift(insight);
+    state.entries = state.entries.slice(0, 3);
+    nextMillis = randomAiInterval(nextMillis);
+    iterations += 1;
+  }
+  state.nextRefreshAt = new Date(nextMillis).toISOString();
+  return state;
+}
+
 function handleAiInsights(req, res, searchParams) {
-  withAuth(req, res, () => {
-    const symbol = (searchParams.get('symbol') || '').toUpperCase();
+  withAuth(req, res, (username) => {
+    const users = readUsers();
+    const user = users[username];
+    if (!user) {
+      sendJson(res, 404, { error: '用户不存在。' });
+      return;
+    }
+    if (!user.aiInsights) {
+      user.aiInsights = {};
+    }
+    const symbol = (searchParams.get('symbol') || 'HOG').toUpperCase();
     const pool = aiThemes[symbol] || aiThemes.HOG;
-    const driver = pool.drivers[Math.floor(Math.random() * pool.drivers.length)];
-    const tone = pool.tones[Math.floor(Math.random() * pool.tones.length)];
-    const confidence = Math.floor(Math.random() * 41) + 55;
-    const headline = `${pool.headline}：${tone}`;
-    const narrative = `AI研判：${driver}使得当前行情呈现${tone}态势，模型信心约为${confidence}%。请结合自身策略审慎操作。`;
-    const suggestion = tone.includes('涨') || tone.includes('上行') || tone.includes('走高')
-      ? '趋势偏多，建议控制节奏分批建仓。'
-      : tone.includes('回落') || tone.includes('承压') || tone.includes('下探')
-      ? '风险加剧，可适当减仓或考虑对冲保护。'
-      : '行情区间震荡，建议轻仓观望并关注关键位置突破情况。';
-    sendJson(res, 200, { headline, narrative, suggestion, symbol: symbol || 'HOG' });
+    const state = ensureAiState(user, symbol, pool);
+    rollAiState(state, pool, symbol);
+    users[username] = user;
+    writeUsers(users);
+    sendJson(res, 200, {
+      symbol,
+      insights: state.entries,
+      nextRefreshAt: state.nextRefreshAt
+    });
   });
 }
 

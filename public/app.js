@@ -17,9 +17,6 @@ const MARKETS = {
   SOY: { name: '豆粕期货', unit: '元/吨', currency: 'CNY' }
 };
 
-// 自动刷新 AI 洞察的频率（默认每 3 小时）
-const AI_REFRESH_INTERVAL = 3 * 60 * 60 * 1000;
-
 let token = null;
 let username = null;
 let aiTimer = null;
@@ -32,12 +29,12 @@ const registerForm = document.getElementById('register-form');
 const loginMessage = document.getElementById('login-message');
 const registerMessage = document.getElementById('register-message');
 const logoutBtn = document.getElementById('logout-btn');
-const refreshAiBtn = document.getElementById('refresh-ai');
 const userDisplay = document.getElementById('user-display');
 const balanceEl = document.getElementById('account-balance');
 const holdingsBody = document.getElementById('holdings-body');
 const historyBody = document.getElementById('history-body');
 const aiContent = document.getElementById('ai-content');
+const aiNextEl = document.getElementById('ai-next');
 const sessionAlert = document.getElementById('session-alert');
 const sessionAlertText = document.getElementById('session-alert-text');
 const sessionAlertClose = document.getElementById('session-alert-close');
@@ -142,6 +139,7 @@ function handleUnauthorized(message) {
   setMessage(loginMessage, message, true);
   showAlert(message);
   stopAiAutoRefresh();
+  setAiNextText('下次预计生成：-');
 }
 
 registerForm.addEventListener('submit', async (event) => {
@@ -195,6 +193,7 @@ logoutBtn.addEventListener('click', async () => {
     setMessage(loginMessage, '');
     setMessage(registerMessage, '');
     stopAiAutoRefresh();
+    setAiNextText('下次预计生成：-');
   }
 });
 
@@ -204,8 +203,15 @@ async function enterDashboard() {
   dashboard.classList.remove('hidden');
   userDisplay.textContent = username;
   hideAlert();
-  await Promise.all([refreshSummary(), refreshHistory(), fetchAiInsights()]);
-  startAiAutoRefresh();
+  setAiNextText('下次预计生成：计算中…');
+  await Promise.all([refreshSummary(), refreshHistory()]);
+  try {
+    await fetchAiInsights();
+  } catch (error) {
+    console.warn('AI 洞察加载失败', error);
+    aiContent.innerHTML = `<p class="placeholder">${error.message}</p>`;
+    setAiNextText('下次预计生成：获取失败');
+  }
 }
 
 async function refreshSummary() {
@@ -283,50 +289,105 @@ async function refreshHistory() {
   });
 }
 
+function formatAiTime(isoString) {
+  if (!isoString) return '-';
+  const date = new Date(isoString);
+  if (Number.isNaN(date.getTime())) return '-';
+  return date.toLocaleString('zh-CN', { hour12: false });
+}
+
+function renderAiInsights(insights = []) {
+  aiContent.innerHTML = '';
+  if (!insights.length) {
+    aiContent.innerHTML = '<p class="placeholder">暂未生成新的 AI 观点。</p>';
+    return;
+  }
+  insights.forEach((entry) => {
+    const item = document.createElement('article');
+    item.className = `ai-item ai-${entry.direction || 'neutral'}`;
+
+    const header = document.createElement('div');
+    header.className = 'ai-item-header';
+
+    const badge = document.createElement('span');
+    badge.className = `ai-direction ${entry.direction === 'down' ? 'ai-down' : 'ai-up'}`;
+    badge.textContent = entry.direction === 'down' ? '看跌' : '看涨';
+
+    const title = document.createElement('h3');
+    title.textContent = entry.headline;
+
+    header.append(badge, title);
+
+    const time = document.createElement('p');
+    time.className = 'ai-time';
+    time.textContent = `发布时间：${formatAiTime(entry.issuedAt)}`;
+
+    const impact = document.createElement('p');
+    impact.className = 'ai-impact';
+    impact.textContent = `走势影响：${entry.impact || '—'}`;
+
+    const narrative = document.createElement('p');
+    narrative.textContent = entry.narrative;
+
+    const suggestion = document.createElement('p');
+    suggestion.className = 'ai-suggestion';
+    suggestion.textContent = entry.suggestion;
+
+    item.append(header, time, impact, narrative, suggestion);
+    aiContent.appendChild(item);
+  });
+}
+
+function updateAiNext(nextRefreshAt) {
+  if (!aiNextEl) return;
+  if (!nextRefreshAt) {
+    setAiNextText('下次预计生成：系统准备中');
+    return;
+  }
+  setAiNextText(`下次预计生成：${formatAiTime(nextRefreshAt)}`);
+}
+
+function setAiNextText(text) {
+  if (aiNextEl) {
+    aiNextEl.textContent = text;
+  }
+}
+
+function stopAiAutoRefresh() {
+  if (aiTimer) {
+    clearTimeout(aiTimer);
+    aiTimer = null;
+  }
+}
+
+function scheduleAiAutoRefresh(nextRefreshAt) {
+  if (aiTimer) {
+    clearTimeout(aiTimer);
+    aiTimer = null;
+  }
+  if (!nextRefreshAt) return;
+  const targetTime = Date.parse(nextRefreshAt);
+  if (Number.isNaN(targetTime)) return;
+  const delay = Math.max(targetTime - Date.now(), 60 * 1000);
+  aiTimer = setTimeout(async () => {
+    try {
+      await fetchAiInsights();
+    } catch (error) {
+      console.warn('自动刷新 AI 洞察失败', error);
+    }
+  }, delay);
+}
+
 async function fetchAiInsights() {
   const markets = Object.keys(MARKETS);
   const target = markets[Math.floor(Math.random() * markets.length)] || 'HOG';
   const data = await request(`${API.ai}?symbol=${encodeURIComponent(target)}`, {
     method: 'GET'
   });
-  aiContent.innerHTML = '';
-  const headline = document.createElement('h3');
-  headline.textContent = data.headline;
-  const narrative = document.createElement('p');
-  narrative.textContent = data.narrative;
-  const suggestion = document.createElement('p');
-  suggestion.className = 'ai-suggestion';
-  suggestion.textContent = data.suggestion;
-  aiContent.append(headline, narrative, suggestion);
-}
-
-if (refreshAiBtn) {
-  refreshAiBtn.addEventListener('click', async () => {
-    try {
-      await fetchAiInsights();
-      startAiAutoRefresh();
-    } catch (error) {
-      aiContent.innerHTML = `<p class="placeholder">${error.message}</p>`;
-    }
-  });
-}
-
-function startAiAutoRefresh() {
-  stopAiAutoRefresh();
-  aiTimer = setInterval(async () => {
-    try {
-      await fetchAiInsights();
-    } catch (error) {
-      console.warn('自动刷新 AI 洞察失败', error);
-    }
-  }, AI_REFRESH_INTERVAL);
-}
-
-function stopAiAutoRefresh() {
-  if (aiTimer) {
-    clearInterval(aiTimer);
-    aiTimer = null;
-  }
+  renderAiInsights(data.insights || []);
+  updateAiNext(data.nextRefreshAt);
+  scheduleAiAutoRefresh(data.nextRefreshAt);
+  return data;
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
