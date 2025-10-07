@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>黄金期货 - 期货买卖模拟器</title>
+    <link rel="stylesheet" href="../styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body
+    class="market-page theme-gold"
+    data-symbol="GOLD"
+    data-name="黄金期货"
+    data-unit="元/克"
+    data-description="联动宏观利率、美元与避险需求的黄金合约模拟。"
+    data-start-price="430"
+    data-min-price="320"
+    data-volatility="6"
+  >
+    <div class="session-alert hidden" id="session-alert">
+      <p id="session-alert-text"></p>
+      <button id="session-alert-close" aria-label="关闭提示">×</button>
+    </div>
+    <section class="auth-shell" id="auth-shell">
+      <div class="auth-card">
+        <h1 class="brand">期货买卖模拟器</h1>
+        <p class="tagline">登录后把握黄金期货的避险节奏与波动机遇。</p>
+        <div class="tabs">
+          <button class="tab active" data-target="login-form">登录</button>
+          <button class="tab" data-target="register-form">注册</button>
+        </div>
+        <form id="login-form" class="form active">
+          <label>
+            用户名
+            <input type="text" id="login-username" autocomplete="username" required />
+          </label>
+          <label>
+            密码
+            <input type="password" id="login-password" autocomplete="current-password" required />
+          </label>
+          <button type="submit" class="primary-btn">登录</button>
+          <p class="form-message" id="login-message"></p>
+        </form>
+        <form id="register-form" class="form">
+          <label>
+            用户名
+            <input type="text" id="register-username" autocomplete="username" required />
+          </label>
+          <label>
+            密码
+            <input type="password" id="register-password" autocomplete="new-password" required />
+          </label>
+          <button type="submit" class="primary-btn">创建账户</button>
+          <p class="form-message" id="register-message"></p>
+        </form>
+      </div>
+    </section>
+
+    <main class="market-shell hidden" id="market-app">
+      <header class="market-header">
+        <div>
+          <a class="ghost-btn" href="../index.html">← 返回主页面</a>
+          <h1 id="market-title"></h1>
+          <p id="market-description"></p>
+        </div>
+        <div class="header-actions">
+          <span class="user-pill">当前账户：<strong id="user-display"></strong></span>
+          <button id="logout-btn" class="ghost-btn">退出登录</button>
+        </div>
+      </header>
+
+      <section class="market-panels">
+        <article class="market-card-surface">
+          <div class="price-highlight">
+            <div>
+              <p class="label">最新价</p>
+              <p class="price" id="current-price">-</p>
+            </div>
+            <div>
+              <p class="label">涨跌幅</p>
+              <p class="change" id="price-change">-</p>
+            </div>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="price-chart"></canvas>
+          </div>
+          <div class="trade-controls">
+            <input type="number" min="1" value="50" id="trade-quantity" />
+            <button id="buy-btn" class="buy-btn">买入</button>
+            <button id="sell-btn" class="sell-btn">卖出</button>
+          </div>
+          <div class="market-stats">
+            <div class="stat">
+              <p class="label">账户余额</p>
+              <p class="value" id="account-balance">-</p>
+            </div>
+            <div class="stat">
+              <p class="label">当前持仓</p>
+              <p class="value" id="account-position">-</p>
+            </div>
+            <div class="stat">
+              <p class="label">持仓均价</p>
+              <p class="value" id="account-average">-</p>
+            </div>
+            <div class="stat">
+              <p class="label">浮动盈亏</p>
+              <p class="value" id="unrealized-pnl">-</p>
+            </div>
+          </div>
+          <p class="hint">行情结合宏观事件随机波动，立即下单体验黄金策略。</p>
+          <div class="kickout-banner" id="kickout-banner">您已在其他页面登录，该页面已退出，请重新登录。</div>
+        </article>
+
+        <article class="market-card-surface">
+          <h2>交易记录</h2>
+          <table class="market-history-table">
+            <thead>
+              <tr>
+                <th>时间</th>
+                <th>方向</th>
+                <th>数量</th>
+                <th>成交价</th>
+                <th>余额</th>
+              </tr>
+            </thead>
+            <tbody id="history-body">
+              <tr>
+                <td colspan="5" class="placeholder">暂无交易</td>
+              </tr>
+            </tbody>
+          </table>
+        </article>
+
+        <article class="market-ai">
+          <h2>AI 市场洞察</h2>
+          <p class="ai-note">系统会在每 12-24 小时随机生成新观点，并自动保留最近 3 条方向研判。</p>
+          <div id="ai-content" class="ai-content">
+            <p class="placeholder">加载中...</p>
+          </div>
+          <p class="ai-timestamp" id="ai-next">下次预计生成：-</p>
+        </article>
+      </section>
+    </main>
+
+    <script src="../market.js" type="module"></script>
+  </body>
+</html>
