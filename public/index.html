@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>期货买卖模拟器</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="app-shell">
+    <div class="session-alert hidden" id="session-alert">
+      <p id="session-alert-text"></p>
+      <button id="session-alert-close" aria-label="关闭提示">×</button>
+    </div>
+    <section class="auth-shell" id="auth-shell">
+      <div class="auth-card">
+        <h1 class="brand">期货买卖模拟器</h1>
+        <p class="tagline">注册并登录，开始多品种期货模拟交易</p>
+        <div class="tabs">
+          <button class="tab active" data-target="login-form">登录</button>
+          <button class="tab" data-target="register-form">注册</button>
+        </div>
+        <form id="login-form" class="form active">
+          <label>
+            用户名
+            <input type="text" id="login-username" autocomplete="username" required />
+          </label>
+          <label>
+            密码
+            <input type="password" id="login-password" autocomplete="current-password" required />
+          </label>
+          <button type="submit" class="primary-btn">登录</button>
+          <p class="form-message" id="login-message"></p>
+        </form>
+        <form id="register-form" class="form">
+          <label>
+            用户名
+            <input type="text" id="register-username" autocomplete="username" required />
+          </label>
+          <label>
+            密码
+            <input type="password" id="register-password" autocomplete="new-password" required />
+          </label>
+          <button type="submit" class="primary-btn">创建账户</button>
+          <p class="form-message" id="register-message"></p>
+        </form>
+      </div>
+    </section>
+
+    <main class="dashboard hidden" id="dashboard">
+      <header class="dashboard-header">
+        <div>
+          <h1>期货买卖模拟器</h1>
+          <p class="sub">多品种行情随时体验，支持实时交易模拟与AI洞察。</p>
+        </div>
+        <div class="header-actions">
+          <span class="user-pill">当前账户：<strong id="user-display"></strong></span>
+          <button id="logout-btn" class="ghost-btn">退出登录</button>
+        </div>
+      </header>
+
+      <section class="summary-grid">
+        <article class="card balance-card">
+          <header>
+            <h2>账户余额</h2>
+          </header>
+          <p class="balance" id="account-balance">-</p>
+          <p class="hint">初始资金为 1,000,000 元，可在各品种页面进行交易。</p>
+        </article>
+        <article class="card holdings-card">
+          <header class="card-header">
+            <h2>我的持仓</h2>
+            <span class="card-sub">汇总所有品种的当前仓位</span>
+          </header>
+          <table class="holdings-table">
+            <thead>
+              <tr>
+                <th>品种</th>
+                <th>持仓数量</th>
+                <th>持仓均价</th>
+              </tr>
+            </thead>
+            <tbody id="holdings-body">
+              <tr>
+                <td colspan="3" class="placeholder">暂无持仓，前往下方品种页面开始交易。</td>
+              </tr>
+            </tbody>
+          </table>
+        </article>
+        <article class="card ai-card">
+          <header class="card-header">
+            <h2>AI 市场洞察</h2>
+            <button id="refresh-ai" class="ghost-btn">刷新</button>
+          </header>
+          <p class="ai-note">系统会每 3 小时自动更新一次，您也可以手动刷新查看最新观点。</p>
+          <div id="ai-content" class="ai-content">
+            <p class="placeholder">登录后可查看多品种趋势预测。</p>
+          </div>
+        </article>
+      </section>
+
+      <section class="markets-section">
+        <header class="section-heading">
+          <h2>品种快选</h2>
+          <p>不同页面拥有专属配色与行情表现，点击卡片即可进入对应模拟盘。</p>
+        </header>
+        <div class="markets-grid">
+          <a class="market-card theme-hog" href="markets/hog.html">
+            <div>
+              <h3>生猪期货</h3>
+              <p>猪肉产业链行情与供需节奏</p>
+            </div>
+            <span class="go">进入交易 →</span>
+          </a>
+          <a class="market-card theme-gold" href="markets/gold.html">
+            <div>
+              <h3>黄金期货</h3>
+              <p>避险资产与全球宏观风向</p>
+            </div>
+            <span class="go">进入交易 →</span>
+          </a>
+          <a class="market-card theme-maotai" href="markets/maotai.html">
+            <div>
+              <h3>白酒主力（茅台）</h3>
+              <p>高端消费品的价格博弈</p>
+            </div>
+            <span class="go">进入交易 →</span>
+          </a>
+          <a class="market-card theme-crude" href="markets/crude.html">
+            <div>
+              <h3>原油期货</h3>
+              <p>全球能源供需与地缘风险</p>
+            </div>
+            <span class="go">进入交易 →</span>
+          </a>
+          <a class="market-card theme-soy" href="markets/soy.html">
+            <div>
+              <h3>豆粕期货</h3>
+              <p>饲料成本与农产品周期</p>
+            </div>
+            <span class="go">进入交易 →</span>
+          </a>
+        </div>
+      </section>
+
+      <section class="card history-card">
+        <header class="card-header">
+          <h2>最新交易记录</h2>
+          <span class="card-sub">展示最近的十条成交，可在品种页查看更多细节。</span>
+        </header>
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th>时间</th>
+              <th>品种</th>
+              <th>方向</th>
+              <th>数量</th>
+              <th>成交价</th>
+              <th>余额</th>
+            </tr>
+          </thead>
+          <tbody id="history-body">
+            <tr>
+              <td colspan="6" class="placeholder">暂无交易。</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+
+    <script src="app.js" type="module"></script>
+  </body>
+</html>
